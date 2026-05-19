@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "/home/bevebkba/.gradle/daemon/9.4.1/com.example.hzlokuma.mobile-debug-49:/drawable_ic_app_logo.xml.flat",
+        "source": "/home/bevebkba/.gradle/daemon/9.4.1/com.example.hzlokuma.mobile-main-51:/drawable/ic_app_logo.xml"
+    },
+    {
+        "merged": "com.example.hzlokuma.mobile-debug-49:/drawable_app_icon.png.flat",
+        "source": "com.example.hzlokuma.mobile-main-51:/drawable/app_icon.png"
+    },
+    {
+        "merged": "/home/bevebkba/.gradle/daemon/9.4.1/com.example.hzlokuma.mobile-debug-49:/drawable_app_icon.png.flat",
+        "source": "/home/bevebkba/.gradle/daemon/9.4.1/com.example.hzlokuma.mobile-main-51:/drawable/app_icon.png"
+    }
+]

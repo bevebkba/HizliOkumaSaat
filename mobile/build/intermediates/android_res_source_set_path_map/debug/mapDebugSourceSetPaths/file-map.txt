@@ -1,0 +1,8 @@
+com.example.hzlokuma.mobile-pngs-0 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/generated/res/pngs/debug
+com.example.hzlokuma.mobile-updated_navigation_xml-1 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/generated/updated_navigation_xml/debug
+com.example.hzlokuma.mobile-packageDebugResources-2 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.example.hzlokuma.mobile-packageDebugResources-3 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.example.hzlokuma.mobile-debug-4 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/intermediates/merged_res/debug/mergeDebugResources
+com.example.hzlokuma.mobile-debug-5 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/src/debug/res
+com.example.hzlokuma.mobile-main-6 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/src/main/res
+gradleHome-0 /home/bevebkba/.gradle

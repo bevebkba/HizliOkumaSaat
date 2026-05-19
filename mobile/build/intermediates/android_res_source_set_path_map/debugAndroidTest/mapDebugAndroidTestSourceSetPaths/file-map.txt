@@ -1,0 +1,5 @@
+com.example.hzlokuma.mobile.test.mobile-updated_navigation_xml-0 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/generated/updated_navigation_xml/debugAndroidTest
+com.example.hzlokuma.mobile.test.mobile-packageDebugAndroidTestResources-1 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/intermediates/incremental/debugAndroidTest/packageDebugAndroidTestResources/merged.dir
+com.example.hzlokuma.mobile.test.mobile-packageDebugAndroidTestResources-2 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/intermediates/incremental/debugAndroidTest/packageDebugAndroidTestResources/stripped.dir
+com.example.hzlokuma.mobile.test.mobile-debugAndroidTest-3 /home/bevebkba/AndroidStudioProjects/HzlOkuma/mobile/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources
+gradleHome-0 /home/bevebkba/.gradle

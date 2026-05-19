@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hızlı Okuma</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for better readability -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- PDF.js library for reading PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000; /* OLED Saf Siyah */
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 350px;
+            height: 100vh;
+            max-height: 350px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #reader-display {
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 700;
+            width: 100%;
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            user-select: none;
+        }
+
+        .pivot-char {
+            color: #ef4444;
+            position: relative;
+            flex: 0 0 auto;
+        }
+
+        .focus-lines {
+            position: absolute;
+            top: 10%;
+            bottom: 10%;
+            width: 2px;
+            background-color: rgba(239, 68, 68, 0.3);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .panel {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            top: 0;
+            left: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #000000;
+        }
+
+        .hidden-panel {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+
+        .active-panel {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        textarea::-webkit-scrollbar { width: 4px; }
+        textarea::-webkit-scrollbar-track { background: #1e293b; }
+        textarea::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+        .btn-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        .btn-circle:active {
+            transform: scale(0.9);
+        }
+
+        #settings-panel {
+            overflow-y: auto;
+            justify-content: flex-start;
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        #settings-panel::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+
+        <!-- PANEL 1: Ana Ekran -->
+        <div id="home-panel" class="panel active-panel">
+            <h1 class="text-2xl font-bold mb-2 text-blue-400"><i class="fa-solid fa-book-open"></i> Hızlı Okuma</h1>
+
+            <div class="flex flex-col items-center justify-center flex-1 w-full my-4">
+                <div id="home-progress-text" class="text-slate-300 font-mono text-sm mb-4 text-center">
+                    Kitap yüklenmedi.
+                </div>
+
+                <button id="btn-resume-play" class="w-24 h-24 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex justify-center items-center shadow-lg shadow-blue-900/50 transition-transform active:scale-90">
+                    <i class="fa-solid fa-play text-4xl ml-2"></i>
+                </button>
+            </div>
+
+            <button id="btn-go-settings" class="px-5 py-3 bg-slate-800 rounded-full text-sm font-semibold text-slate-300 hover:text-white flex items-center gap-2 transition-colors active:bg-slate-700">
+                <i class="fa-solid fa-gear"></i> Ayarlar
+            </button>
+        </div>
+
+        <!-- PANEL 2: Ayarlar -->
+        <div id="settings-panel" class="panel hidden-panel">
+            <div class="w-full flex justify-between items-center mb-6 px-2">
+                <h2 class="text-lg font-bold text-slate-200">Ayarlar</h2>
+                <button id="btn-close-settings" class="w-10 h-10 rounded-full bg-slate-800 flex justify-center items-center text-slate-300 active:scale-90">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="w-full space-y-5 px-2">
+
+                <div class="flex justify-between items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                    <span class="text-sm text-slate-300"><i class="fa-solid fa-gauge-high w-5 text-center"></i> Hız (WPM)</span>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-decrease-speed" class="w-8 h-8 rounded bg-slate-700 active:bg-slate-600"><i class="fa-solid fa-minus text-xs"></i></button>
+                        <span id="speed-display" class="font-mono font-bold w-10 text-center text-sm">300</span>
+                        <button id="btn-increase-speed" class="w-8 h-8 rounded bg-slate-700 active:bg-slate-600"><i class="fa-solid fa-plus text-xs"></i></button>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                    <span class="text-sm text-slate-300"><i class="fa-solid fa-text-height w-5 text-center"></i> Boyut</span>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-decrease-font" class="w-8 h-8 rounded bg-slate-700 active:bg-slate-600"><i class="fa-solid fa-minus text-xs"></i></button>
+                        <span id="font-display" class="font-mono font-bold w-10 text-center text-sm">2.5</span>
+                        <button id="btn-increase-font" class="w-8 h-8 rounded bg-slate-700 active:bg-slate-600"><i class="fa-solid fa-plus text-xs"></i></button>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-700/50">
+                    <input type="file" id="pdf-input" accept="application/pdf" class="hidden">
+                    <button id="btn-upload-pdf" class="w-full py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-95">
+                        <i class="fa-solid fa-file-pdf"></i> Yeni Kitap (PDF) Yükle
+                    </button>
+                    <div id="pdf-loading" class="hidden mt-2 text-xs text-center text-red-400 font-bold">
+                    <i class="fa-solid fa-spinner fa-spin"></i> İşleniyor... <span id="pdf-progress"></span>
+                </div>
+            </div>
+
+            <details class="w-full">
+                <summary class="text-xs text-slate-500 cursor-pointer p-2 text-center">Manuel Metin Girişi</summary>
+                    <div class="mt-2">
+                        <textarea id="text-input" class="w-full h-24 p-3 bg-slate-900 text-slate-300 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 resize-none text-xs" placeholder="Okunacak metni buraya yapıştırın..."></textarea>
+                        <button id="btn-save-text" class="mt-2 w-full py-2 bg-slate-700 rounded-xl text-xs text-white">Metni Kaydet</button>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- PANEL 3: Okuma Ekranı -->
+        <div id="reader-panel" class="panel hidden-panel">
+            <div class="absolute top-4 w-full px-6 flex justify-between items-center text-xs text-slate-500 font-mono">
+                <span id="progress-text">0/0</span>
+                <span id="current-wpm-display">300 WPM</span>
+            </div>
+
+            <div class="absolute top-0 left-0 w-full h-1 bg-slate-900">
+                <div id="progress-bar" class="h-full bg-blue-600 w-full origin-left scale-x-0 transition-transform duration-100 ease-linear"></div>
+            </div>
+
+            <!-- Ana Okuma Alanı (Tıklanabilir) -->
+        <div id="reader-display" class="cursor-pointer h-full flex flex-col justify-center items-center w-full relative">
+            <div class="focus-lines"></div>
+            <div id="word-container" class="w-full flex items-center justify-center whitespace-nowrap">
+                <span id="word-left" class="flex-1 text-right">Ha</span>
+                <span id="word-pivot" class="pivot-char">z</span>
+                <span id="word-right" class="flex-1 text-left">ır...</span>
+            </div>
+        </div>
+
+        <!-- Alt Kontroller -->
+        <div class="absolute bottom-6 w-full flex justify-center px-4 pointer-events-none">
+            <button id="btn-rewind" class="pointer-events-auto px-5 py-2 rounded-full bg-slate-800/80 text-slate-300 hover:text-white active:scale-90 border border-slate-700 flex items-center gap-2 shadow-lg backdrop-blur">
+                <i class="fa-solid fa-rotate-left text-sm"></i> <span class="text-xs font-bold">Geri Al</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Bitiş Ekranı -->
+        <div id="finish-overlay" class="absolute inset-0 bg-slate-900/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <i class="fa-solid fa-trophy text-5xl text-yellow-500 mb-4"></i>
+            <h2 class="text-xl font-bold text-white">Tebrikler!</h2>
+            <p class="text-slate-400 mt-2 text-center px-6 text-sm" id="stats-text"></p>
+            <button id="btn-close-finish" class="mt-6 px-6 py-2 bg-slate-800 text-white rounded-full font-bold active:scale-90 border border-slate-700">Ana Ekrana Dön</button>
+        </div>
+
+    </div>
+
+    <script>
+        let words = [];
+        let currentWordIndex = 0;
+        let isPlaying = false;
+        let readingSpeedWPM = 300;
+        let fontSizeRem = 2.5;
+        let timerId = null;
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const homePanel = document.getElementById('home-panel');
+        const settingsPanel = document.getElementById('settings-panel');
+        const readerPanel = document.getElementById('reader-panel');
+
+        const homeProgressText = document.getElementById('home-progress-text');
+        const btnResumePlay = document.getElementById('btn-resume-play');
+        const btnGoSettings = document.getElementById('btn-go-settings');
+        const btnCloseSettings = document.getElementById('btn-close-settings');
+
+        const speedDisplay = document.getElementById('speed-display');
+        const fontDisplay = document.getElementById('font-display');
+        const textInput = document.getElementById('text-input');
+        const btnSaveText = document.getElementById('btn-save-text');
+
+        const progressText = document.getElementById('progress-text');
+        const currentWpmDisplay = document.getElementById('current-wpm-display');
+        const progressBar = document.getElementById('progress-bar');
+        const readerDisplay = document.getElementById('reader-display');
+        const wordContainer = document.getElementById('word-container');
+
+        const wordLeft = document.getElementById('word-left');
+        const wordPivot = document.getElementById('word-pivot');
+        const wordRight = document.getElementById('word-right');
+
+        const finishOverlay = document.getElementById('finish-overlay');
+        const statsText = document.getElementById('stats-text');
+
+        const btnDecreaseSpeed = document.getElementById('btn-decrease-speed');
+        const btnIncreaseSpeed = document.getElementById('btn-increase-speed');
+        const btnDecreaseFont = document.getElementById('btn-decrease-font');
+        const btnIncreaseFont = document.getElementById('btn-increase-font');
+        const btnRewind = document.getElementById('btn-rewind');
+        const btnCloseFinish = document.getElementById('btn-close-finish');
+
+        const pdfInput = document.getElementById('pdf-input');
+        const btnUploadPdf = document.getElementById('btn-upload-pdf');
+        const pdfLoading = document.getElementById('pdf-loading');
+        const pdfProgress = document.getElementById('pdf-progress');
+
+        function loadData() {
+            const savedText = localStorage.getItem('speedReader_text');
+            if (savedText) {
+                words = savedText.split(/\s+/).filter(w => w.length > 0);
+                textInput.value = savedText;
+            }
+
+            const savedIndex = localStorage.getItem('speedReader_index');
+            if (savedIndex !== null) currentWordIndex = parseInt(savedIndex);
+            if (currentWordIndex >= words.length && words.length > 0) currentWordIndex = 0;
+
+            const savedWpm = localStorage.getItem('speedReader_wpm');
+            if (savedWpm !== null) readingSpeedWPM = parseInt(savedWpm);
+
+            const savedFont = localStorage.getItem('speedReader_font');
+            if (savedFont !== null) fontSizeRem = parseFloat(savedFont);
+
+            updateSettingsUI();
+            updateHomeUI();
+        }
+
+        function saveData() {
+            localStorage.setItem('speedReader_index', currentWordIndex);
+            localStorage.setItem('speedReader_wpm', readingSpeedWPM);
+            localStorage.setItem('speedReader_font', fontSizeRem);
+            updateHomeUI(); // Kayıt yapıldığında UI ve Android köprüsü güncellensin
+        }
+
+        function saveText(rawText) {
+            localStorage.setItem('speedReader_text', rawText);
+            words = rawText.split(/\s+/).filter(w => w.length > 0);
+            currentWordIndex = 0;
+            saveData();
+        }
+
+        function updateSettingsUI() {
+            speedDisplay.innerText = readingSpeedWPM;
+            fontDisplay.innerText = fontSizeRem.toFixed(1);
+            readerDisplay.style.fontSize = `${fontSizeRem}rem`;
+        }
+
+        function updateHomeUI() {
+            let percentage = 0;
+            if (words.length === 0) {
+                homeProgressText.innerHTML = "Henüz kitap yüklenmedi.<br><span class='text-xs text-slate-500'>Ayarlardan PDF yükleyin.</span>";
+                btnResumePlay.classList.add('opacity-50');
+            } else {
+                btnResumePlay.classList.remove('opacity-50');
+                percentage = words.length > 0 ? Math.floor((currentWordIndex / words.length) * 100) : 0;
+                homeProgressText.innerHTML = `Okunmaya Hazır<br><span class='text-blue-400 font-bold'>%${percentage}</span> Tamamlandı <br><span class='text-xs text-slate-500'>(${currentWordIndex} / ${words.length})</span>`;
+
+                if(currentWordIndex >= words.length - 1 && words.length > 0) {
+                     homeProgressText.innerHTML = `<span class='text-green-400 font-bold'>Kitap Bitti!</span><br><span class='text-xs text-slate-500'>Ayarlardan başa sarabilirsiniz.</span>`;
+                     percentage = 100;
+                }
+            }
+
+            // *** ANDROID COMPLICATION BRIDGE EKLENTİSİ ***
+            // Eğer uygulama Android Studio üzerinden (WebView içinde) çalışıyorsa
+            // ilerleme yüzdesini saate gönderir.
+            if (window.AndroidBridge && window.AndroidBridge.updateProgress) {
+                window.AndroidBridge.updateProgress(percentage);
+            }
+        }
+
+        function updateDisplay() {
+            if (currentWordIndex >= words.length) {
+                finishReading();
+                return;
+            }
+
+            const word = words[currentWordIndex];
+            if (word) {
+                const cleanWord = word.replace(/[.,!?;:]/g, '');
+                const length = cleanWord.length || word.length;
+
+                let pivot = Math.floor(length / 2);
+                if (length > 5) pivot = Math.floor(length / 2) - 1;
+                if (length <= 1) pivot = 0;
+
+                wordLeft.textContent = word.substring(0, pivot);
+                wordPivot.textContent = word.substring(pivot, pivot + 1);
+                wordRight.textContent = word.substring(pivot + 1);
+            }
+
+            progressText.innerText = `${currentWordIndex + 1}/${words.length}`;
+            progressBar.style.transform = `scaleX(${(currentWordIndex + 1) / words.length})`;
+
+            if(currentWordIndex > 0 && currentWordIndex % 50 === 0) saveData();
+        }
+
+        function togglePlayPause() {
+            if (currentWordIndex >= words.length) {
+                currentWordIndex = 0;
+            }
+
+            isPlaying = !isPlaying;
+
+            if (isPlaying) {
+                wordContainer.style.opacity = "1";
+                nextWord();
+            } else {
+                clearTimeout(timerId);
+                saveData();
+                wordLeft.textContent = "";
+                wordPivot.textContent = "II";
+                wordRight.textContent = " Bekliyor";
+            }
+        }
+
+        function nextWord() {
+            if(!isPlaying) return;
+            updateDisplay();
+
+            let delay = (60 / readingSpeedWPM) * 1000;
+
+            const currentText = words[currentWordIndex];
+            if (currentText) {
+                const lastChar = currentText.slice(-1);
+                if (lastChar === '.' || lastChar === ',' || lastChar === '!' || lastChar === '?' || lastChar === ';' || lastChar === ':') {
+                    delay += 250;
+                }
+            }
+
+            currentWordIndex++;
+
+            if (currentWordIndex < words.length && isPlaying) {
+                timerId = setTimeout(nextWord, delay);
+            } else if (currentWordIndex >= words.length) {
+                finishReading();
+            }
+        }
+
+        function finishReading() {
+            clearTimeout(timerId);
+            isPlaying = false;
+            saveData();
+            finishOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            statsText.innerText = `${words.length} kelimelik metni bitirdiniz.`;
+        }
+
+        function switchPanel(hideId, showId) {
+            document.getElementById(hideId).classList.replace('active-panel', 'hidden-panel');
+            document.getElementById(showId).classList.replace('hidden-panel', 'active-panel');
+        }
+
+        function goHome() {
+            isPlaying = false;
+            clearTimeout(timerId);
+            saveData();
+            switchPanel('reader-panel', 'home-panel');
+        }
+
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        readerPanel.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        readerPanel.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            const swipeDistance = touchStartX - touchEndX;
+            if (Math.abs(swipeDistance) > 50) {
+                goHome();
+            }
+        });
+
+        btnResumePlay.addEventListener('click', () => {
+            if (words.length === 0) {
+                switchPanel('home-panel', 'settings-panel');
+                return;
+            }
+
+            currentWpmDisplay.innerText = `${readingSpeedWPM} WPM`;
+            readerDisplay.style.fontSize = `${fontSizeRem}rem`;
+            switchPanel('home-panel', 'reader-panel');
+
+            isPlaying = true;
+            nextWord();
+        });
+
+        readerDisplay.addEventListener('click', togglePlayPause);
+
+        btnRewind.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentWordIndex = Math.max(0, currentWordIndex - 20);
+            if(!isPlaying) {
+                updateDisplay();
+                saveData();
+            }
+        });
+
+        btnIncreaseSpeed.addEventListener('click', () => { readingSpeedWPM += 25; updateSettingsUI(); saveData(); });
+        btnDecreaseSpeed.addEventListener('click', () => { readingSpeedWPM = Math.max(50, readingSpeedWPM - 25); updateSettingsUI(); saveData(); });
+        btnIncreaseFont.addEventListener('click', () => { fontSizeRem = Math.min(5.0, fontSizeRem + 0.2); updateSettingsUI(); saveData(); });
+        btnDecreaseFont.addEventListener('click', () => { fontSizeRem = Math.max(1.0, fontSizeRem - 0.2); updateSettingsUI(); saveData(); });
+
+        btnGoSettings.addEventListener('click', () => switchPanel('home-panel', 'settings-panel'));
+        btnCloseSettings.addEventListener('click', () => switchPanel('settings-panel', 'home-panel'));
+
+        btnSaveText.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (text) {
+                saveText(text);
+                btnSaveText.innerText = "Kaydedildi!";
+                setTimeout(() => btnSaveText.innerText = "Metni Kaydet", 2000);
+            }
+        });
+
+        btnCloseFinish.addEventListener('click', () => {
+            finishOverlay.classList.add('opacity-0', 'pointer-events-none');
+            switchPanel('reader-panel', 'home-panel');
+        });
+
+        btnUploadPdf.addEventListener('click', () => pdfInput.click());
+
+        pdfInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                alert("Lütfen geçerli bir PDF seçin.");
+                return;
+            }
+
+            btnUploadPdf.classList.add('hidden');
+            pdfLoading.classList.remove('hidden');
+            pdfProgress.textContent = '0%';
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const numPages = pdf.numPages;
+                let fullText = '';
+
+                for (let i = 1; i <= numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + ' ';
+
+                    pdfProgress.textContent = `%${Math.round((i / numPages) * 100)}`;
+                }
+
+                fullText = fullText.replace(/\s{2,}/g, ' ').trim();
+                saveText(fullText);
+
+                alert("Kitap başarıyla yüklendi!");
+                switchPanel('settings-panel', 'home-panel');
+
+            } catch (error) {
+                console.error("PDF hatası:", error);
+                alert("PDF okunurken bir hata oluştu.");
+            } finally {
+                pdfLoading.classList.add('hidden');
+                btnUploadPdf.classList.remove('hidden');
+                pdfInput.value = '';
+            }
+        });
+
+        loadData();
+    </script>
+</body>
+</html>
